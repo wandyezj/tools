@@ -1,6 +1,6 @@
 const { execSync } = require("child_process");
 const fs = require("fs");
-const path = require("path")
+const path = require("path");
 
 const parameters = process.argv.slice(2);
 
@@ -14,14 +14,14 @@ const [branchName] = parameters;
 let branchPrefix = "";
 const configPath = path.join(__dirname, "create-branch.config.json");
 if (fs.existsSync(configPath)) {
-    const data = fs.readFileSync(configPath, {encoding:"utf-8"});
+    const data = fs.readFileSync(configPath, { encoding: "utf-8" });
     try {
         const config = JSON.parse(data);
         const prefix = config["prefix"];
         if (typeof prefix === "string") {
             branchPrefix = prefix;
         } else {
-            throw "Invalid Prefix"
+            throw "Invalid Prefix";
         }
     } catch {
         console.error(`Invalid config ${configPath}\n${data}`);
@@ -29,10 +29,9 @@ if (fs.existsSync(configPath)) {
     }
 }
 
+const branch = `${branchPrefix}${branchName}`;
 
-const branch = `${branchPrefix}${branchName}`
-
-const validBranch = /^([a-z]|-|\/|[0-9])*$/
+const validBranch = /^([a-z]|-|\/|[0-9])*$/;
 
 if (!validBranch.test(branch)) {
     console.error(`Invalid branch name: ${branch}`);
