@@ -1,0 +1,2 @@
+# ignore any config file which should be specific per machine
+*.config.json
