@@ -1,3 +1,3 @@
 const { execSync } = require("child_process");
 
-execSync("git config --local --add push.autoSetupRemote true");
+execSync("git config --local --add push.autoSetupRemote true", {stdio: 'inherit'});
