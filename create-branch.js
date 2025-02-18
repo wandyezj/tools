@@ -6,7 +6,7 @@ const parameters = process.argv.slice(2);
 
 if (parameters.length !== 1) {
     console.log("usage: [branch name]");
-    process.exit(1);
+    process.exit(0);
 }
 
 const [branchName] = parameters;
@@ -25,7 +25,7 @@ if (fs.existsSync(configPath)) {
         }
     } catch {
         console.error(`Invalid config ${configPath}\n${data}`);
-        process.exit(1);
+        process.exit(0);
     }
 }
 
@@ -35,7 +35,7 @@ const validBranch = /^([a-z]|-|\/|[0-9])*$/;
 
 if (!validBranch.test(branch)) {
     console.error(`Invalid branch name: ${branch}`);
-    process.exit(1);
+    process.exit(0);
 }
 
-execSync(`git checkout -b ${branch}`);
+execSync(`git checkout -b ${branch}`, {stdio: 'inherit'});
