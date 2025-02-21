@@ -5,4 +5,4 @@
 set THISDIR=%~dp0
 set THISDIR=%THISDIR:~,-1%
 
-%THISDIR%/tool.cmd alias %*
+node %THISDIR%/alias.js %*
