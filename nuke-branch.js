@@ -24,6 +24,7 @@ const tempBranchName = `temp-${branch}`;
 
 const commands = [
     `git checkout -b ${tempBranchName}`,
+    `git commit -am "temp"`,
     `git branch -D ${branch}`,
     `git checkout -t origin/${branch}`,
     `git branch -D ${tempBranchName}`
