@@ -30,5 +30,6 @@ const commands = [
 ];
 
 commands.forEach(command => {
-    execSync(`git checkout -b ${branch}`, {stdio: 'inherit'});
+    console.log(command);
+    execSync(command, {stdio: 'inherit'});
 });
