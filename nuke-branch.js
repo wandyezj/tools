@@ -24,7 +24,7 @@ const tempBranchName = `temp-${branch}`;
 
 const commands = [
     `git checkout -b ${tempBranchName}`,
-    `git commit -am "temp"`,
+    `git commit -am "temp"`, // if there is nothing to commit this errors
     `git branch -D ${branch}`,
     `git checkout -t origin/${branch}`,
     `git branch -D ${tempBranchName}`
@@ -32,5 +32,10 @@ const commands = [
 
 commands.forEach(command => {
     console.log(command);
-    execSync(command, {stdio: 'inherit'});
+    try {
+        execSync(command, {stdio: 'inherit'});
+    } catch(e) {
+        //console.log(e);
+    }
+    
 });
