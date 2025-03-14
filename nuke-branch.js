@@ -1,11 +1,9 @@
 const { execSync } = require("child_process");
-const fs = require("fs");
-const path = require("path");
 
 const parameters = process.argv.slice(2);
 
 if (parameters.length !== 0) {
-    console.log("usage: nukes the current branch");
+    console.log(`usage: (no arguments) nukes the current checked out branch `);
     process.exit(0);
 }
 
