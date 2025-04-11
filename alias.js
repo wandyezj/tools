@@ -4,6 +4,9 @@ const aliases = {
     "branch" : "create-branch",
     "style" : "command npm run style",
     "lint": "command npm run lint",
+    "test": "command npm run test",
+    "build": "command npm run build",
+    "start": "command npm run start",
 };
 
 const { execSync } = require("child_process");
