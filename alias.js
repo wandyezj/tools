@@ -1,17 +1,12 @@
 // Handle aliases
 
-const aliases = {
-    "branch" : "create-branch",
-    "style" : "command npm run style",
-    "lint": "command npm run lint",
-    "test": "command npm run test",
-    "build": "command npm run build",
-    "start": "command npm run start",
-};
 
 const { execSync } = require("child_process");
 const path = require("path");
 const fs = require("fs");
+
+const aliases = JSON.parse(fs.readFileSync(path.join(__dirname, "alias.json"), "utf8"));
+
 
 const parameters = process.argv.slice(2);
 
@@ -32,14 +27,22 @@ if (alias !== undefined) {
     args.push(...others);
 }
 
-const scriptPath = path.join(__dirname, `${script}.js`);
-if (!fs.existsSync(scriptPath)) {
-    console.error(`script [${script}] not found`)
+// priority order
+const scripts = [
+    { name: `${script}.js`, commandPrefix: "node.exe" },
+    { name: `${script}.cmd`, commandPrefix: "cmd.exe /c" },
+].filter(({ name }) => fs.existsSync(path.join(__dirname, name)));
+
+if (scripts.length === 0) {
+    console.error(`script [${script}] not found`);
     process.exit(0);
 }
 
-const command = `node.exe ${scriptPath} ${args.join(" ")}`;
+const { name, commandPrefix } = scripts[0];
+
+const scriptPath = path.join(__dirname, name);
+const command = `${commandPrefix} ${scriptPath} ${args.join(" ")}`;
 //console.log(command)
 
 // run alias
-execSync(command, {stdio: 'inherit'});
+execSync(command, { stdio: "inherit" });
