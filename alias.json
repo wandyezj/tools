@@ -1,5 +1,9 @@
 {
     "branch": "create-branch",
+    "clone": "git-clone",
+    "main": "git-switch-branch main",
+    "master": "git-switch-branch master",
+    "nuke-branch": "git-nuke-branch",
     "style": "command npm run style",
     "lint": "command npm run lint",
     "test": "command npm run test",
