@@ -22,6 +22,7 @@ let args = others;
 
 let alias = aliases[aliasName];
 if (alias !== undefined) {
+    // Found an alias.
     args = alias.split(" ");
     script = args.shift();
     args.push(...others);
