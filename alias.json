@@ -7,6 +7,7 @@
     "status": "command git status",
     "fetch": "command git fetch",
     "pull": "command git pull",
+    "push": "command git push",
     "style": "command npm run style",
     "lint": "command npm run lint",
     "test": "command npm run test",
