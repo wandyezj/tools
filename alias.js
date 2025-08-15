@@ -5,7 +5,8 @@ const { execSync } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 
-const aliases = JSON.parse(fs.readFileSync(path.join(__dirname, "alias.json"), "utf8"));
+const aliasFilePath = path.join(__dirname, "alias.json");
+const aliases = JSON.parse(fs.readFileSync(aliasFilePath, "utf8"));
 
 
 const parameters = process.argv.slice(2);
@@ -28,11 +29,17 @@ if (alias !== undefined) {
     args.push(...others);
 }
 
+const os = require("os");
+const platform = os.type();
+const isWindows = platform === 'Windows_NT'
+const isMac = platform === 'Darwin';
+
 // priority order
 const scripts = [
-    { name: `${script}.js`, commandPrefix: "node.exe" },
-    { name: `${script}.cmd`, commandPrefix: "cmd.exe /c" },
-].filter(({ name }) => fs.existsSync(path.join(__dirname, name)));
+    { name: `${script}.js`, commandPrefix: "node.exe", available: isWindows },
+    { name: `${script}.js`, commandPrefix: "node", available: isMac },
+    { name: `${script}.cmd`, commandPrefix: "cmd.exe /c", available: isWindows },
+].filter(({ available, name }) => available && fs.existsSync(path.join(__dirname, name)));
 
 if (scripts.length === 0) {
     console.error(`script [${script}] not found`);
