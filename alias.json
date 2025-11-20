@@ -9,6 +9,7 @@
     "pull": "command git pull",
     "push": "command git push",
     "style": "command npm run style",
+    "style-check": "command npm run style-check",
     "lint": "command npm run lint",
     "test": "command npm run test",
     "build": "command npm run build",
