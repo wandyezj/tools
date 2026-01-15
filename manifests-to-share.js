@@ -13,7 +13,12 @@ const shareDirectoryMac = `/Users/${username}/Library/Containers/com.microsoft.E
 // Network share
 const shareDirectoryWin = "C:/manifests";
 
-const manifestDirectory = "./manifests";
+// Usage: node manifests-to-share.js [manifestDirectory]
+// If no argument is provided, it defaults to "./manifests"
+const parameters = process.argv.slice(2);
+const [manifestDirectorySource] = parameters;
+
+const manifestDirectory = manifestDirectorySource || "./manifests";
 const shareDirectory = isMac ? shareDirectoryMac : shareDirectoryWin;
 
 const manifests = fs
