@@ -23,7 +23,7 @@ const shareDirectory = isMac ? shareDirectoryMac : shareDirectoryWin;
 
 const manifests = fs
     .readdirSync(manifestDirectory)
-    .filter((file) => file.endsWith(".xml") && (file.startsWith("production") || file.startsWith("local")));
+    .filter((file) => file.endsWith(".xml") && (file.startsWith("production") || file.startsWith("local")) || (manifestDirectorySource && file.endsWith("manifest.xml")));
 
 function getManifestPrefix(data) {
     const displayName = data.split(`<DisplayName DefaultValue="`)[1].split(`"`)[0];
