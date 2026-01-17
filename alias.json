@@ -10,8 +10,10 @@
     "push": "command git push",
     "style": "command npm run style",
     "style-check": "command npm run style-check",
+    "spell-check": "command npm run spell-check",
     "lint": "command npm run lint",
     "test": "command npm run test",
     "build": "command npm run build",
+    "compile": "command npm run compile",
     "start": "command npm run start"
 }
