@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "esbenp.prettier-vscode",
+        "redhat.vscode-xml",
+        "dbaeumer.vscode-eslint",
+        "davidanson.vscode-markdownlint",
+        "bierner.github-markdown-preview",
+        "streetsidesoftware.code-spell-checker"
+    ]
+}
