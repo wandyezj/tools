@@ -25,3 +25,6 @@ sudo apt install zsh
 chsh -s $(which zsh)
 ```
 
+## Shortcuts
+
+- Clear a line: `Ctrl + U`
