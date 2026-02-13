@@ -6,4 +6,3 @@ rmdir /S /Q "%target%"
 mkdir "%target%"
 
 dir /B %target%
-PAUSE
