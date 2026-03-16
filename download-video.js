@@ -14,6 +14,11 @@ Options:
 --mp4 - Download the video and convert to mp4 (this takes a while)
 --mp3 - Download the video audio as mp3.
 
+--playlist - Download the entire playlist if the URL is a playlist. By default, only the first video will be downloaded.
+
+--out-dir <directory> - Output directory to save the downloaded files. Default is the Desktop.
+--ignore-comment-lines - Ignore lines starting with # in text and tsv files.
+--use-tsv-name - Use the name from the tsv file as the output filename instead of the video title.
 
 Prerequisites:
 
@@ -35,6 +40,12 @@ const { values, positionals } = parseArgs({
             type: "boolean",
             short: "h",
         },
+        playlist: {
+            type: "boolean",
+        },
+        ["prefix-uploader"]: {
+            type: "boolean",
+        },
         video: {
             type: "boolean",
         },
@@ -44,11 +55,30 @@ const { values, positionals } = parseArgs({
         mp3: {
             type: "boolean",
         },
+        ["out-dir"]: {
+            type: "string",
+        },
+        ["ignore-comment-lines"]: {
+            type: "boolean",
+        },
+        ["use-tsv-name"]: {
+            type: "boolean",
+        },
     },
     allowPositionals: true,
 });
 
-const { help, mp4, mp3, video } = values;
+const {
+    help,
+    mp4,
+    mp3,
+    video,
+    playlist,
+    ["prefix-uploader"]: prefixUploader,
+    ["out-dir"]: outDirOption,
+    ["ignore-comment-lines"]: ignoreCommentLines,
+    ["use-tsv-name"]: useTsvName,
+} = values;
 
 const downloadModeVideo = "video";
 const downloadModeMp4 = "mp4";
@@ -82,14 +112,29 @@ if (positionals.length !== 1) {
     process.exit(1);
 }
 
-const [target] = positionals;
-const home = process.env.HOME;
-const outDir = home + "/Desktop";
-
-if (!home) {
-    console.error("Error: HOME environment variable is not set.");
-    process.exit(1);
+function getDefaultOutDir() {
+    const home = process.env.HOME;
+    if (!home) {
+        console.error("Error: HOME environment variable is not set.");
+        process.exit(1);
+    }
+    const outDirDefault = home + "/Desktop";
+    return outDirDefault;
 }
+
+function getOutDirFromOption(outDirOption) {
+    if (outDirOption === undefined) {
+        return undefined;
+    }
+    if (!fs.existsSync(outDirOption)) {
+        console.error(`Error: Output directory does not exist: ${outDirOption}`);
+        process.exit(1);
+    }
+    return outDirOption;
+}
+
+const [target] = positionals;
+const outDir = getOutDirFromOption(outDirOption) || getDefaultOutDir();
 
 // Check if yt-dlp is installed
 const check = spawnSync("yt-dlp", ["--version"], { stdio: "inherit" });
@@ -100,30 +145,46 @@ if (check.error || check.status !== 0) {
     process.exit(1);
 }
 
-function downloadVideo(outDir, url) {
-    const args = ["-f", "best", "-o", outDir + "/%(title)s.%(ext)s", url];
+function getOutputFileTemplate(outDir, nameOverride) {
+    const baseFilename = nameOverride ? `${nameOverride}.%(ext)s` : "%(title)s.%(ext)s";
+
+    const filenameTemplate = prefixUploader ? `%(uploader)s - ${baseFilename}` : baseFilename;
+    const outFile = outDir + "/" + filenameTemplate;
+    return outFile;
+}
+
+function downloadVideo(outDir, url, nameOverride) {
+    const outFile = getOutputFileTemplate(outDir, nameOverride);
+
+    const args = ["-f", "best", "-o", outFile, url];
 
     const run = spawnSync("yt-dlp", args, { stdio: "inherit" });
     return run.status ?? 1;
 }
 
-function downloadMp4(outDir, url) {
-    const args = ["-f", "bv*+ba/b", "--recode-video", "mp4", "-o", outDir + "/%(title)s.%(ext)s", url];
+function downloadMp4(outDir, url, nameOverride) {
+    const outFile = getOutputFileTemplate(outDir, nameOverride);
+
+    const args = ["-f", "bv*+ba/b", "--recode-video", "mp4", "-o", outFile, url];
 
     const run = spawnSync("yt-dlp", args, { stdio: "inherit" });
     return run.status ?? 1;
 }
 
-function downloadMp3(outDir, url) {
+function downloadMp3(outDir, url, nameOverride) {
+    //const isPlaylist = url.includes("playlist?") || url.includes("list=");
+
+    const outFile = getOutputFileTemplate(outDir, nameOverride);
+
     const args = [
-        "--no-playlist",
+        playlist ? "--yes-playlist" : "--no-playlist",
         "-x",
         "--audio-format",
         "mp3",
         "--audio-quality",
         "0",
         "-o",
-        outDir + "/%(title)s.%(ext)s",
+        outFile,
         url,
     ];
 
@@ -155,7 +216,8 @@ function getFileLines(filePath) {
     const lines = data
         .split("\n")
         .map((line) => line.trim())
-        .filter((line) => line.length > 0);
+        .filter((line) => line.length > 0)
+        .filter((line) => !(ignoreCommentLines && line.startsWith("#")));
 
     return lines;
 }
@@ -188,6 +250,16 @@ function downloadTxt(outDir, filePath, downloadMode) {
     return hadError ? 1 : 0;
 }
 
+/**
+ * Remove characters that are not allowed in filenames, to avoid issues when matching against existing files and when saving the downloaded file.
+ * @param {string} name
+ * @returns {string}
+ */
+function sanitizeFilename(name) {
+    // Remove characters that are not allowed in filenames.
+    return name.replaceAll(/[\/\\?%*:|"<>]/g, " ");
+}
+
 function downloadTsv(outDir, filePath, downloadMode) {
     const { download, extension } = getDownloadMode(downloadMode);
 
@@ -201,7 +273,7 @@ function downloadTsv(outDir, filePath, downloadMode) {
     }
 
     const lines = getFileLines(filePath);
-    const name_url = lines.map((line) => line.split("\t"));
+    const name_url = lines.map((line) => line.split("\t")).map(([name, url]) => [sanitizeFilename(name), url]);
 
     let hadError = false;
 
@@ -218,7 +290,7 @@ function downloadTsv(outDir, filePath, downloadMode) {
         }
 
         console.log(`Downloading: ${name} from ${url}`);
-        const status = download(outDir, url);
+        const status = download(outDir, url, name);
         if (status !== 0) {
             console.error(`Failed to download: ${name} from ${url}`);
             hadError = true;
