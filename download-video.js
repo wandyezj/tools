@@ -14,7 +14,7 @@ Options:
 --mp4 - Download the video and convert to mp4 (this takes a while)
 --mp3 - Download the video audio as mp3.
 
---playlist - Download the entire playlist if the URL is a playlist. By default, only the first video will be downloaded.
+--playlist - (only applies with --mp3) Download the entire playlist if the URL is a playlist. By default, only the first video will be downloaded.
 
 --out-dir <directory> - Output directory to save the downloaded files. Default is the Desktop.
 --ignore-comment-lines - Ignore lines starting with # in text and tsv files.
@@ -80,6 +80,11 @@ const {
     ["use-tsv-name"]: useTsvName,
 } = values;
 
+if (playlist && !mp3) {
+    console.error("Error: --playlist option only applies with --mp3.");
+    process.exit(1);
+}
+
 const downloadModeVideo = "video";
 const downloadModeMp4 = "mp4";
 const downloadModeMp3 = "mp3";
@@ -126,7 +131,7 @@ function getOutDirFromOption(outDirOption) {
     if (outDirOption === undefined) {
         return undefined;
     }
-    if (!fs.existsSync(outDirOption)) {
+    if (!fs.existsSync(outDirOption) || !fs.statSync(outDirOption).isDirectory()) {
         console.error(`Error: Output directory does not exist: ${outDirOption}`);
         process.exit(1);
     }
@@ -290,7 +295,7 @@ function downloadTsv(outDir, filePath, downloadMode) {
         }
 
         console.log(`Downloading: ${name} from ${url}`);
-        const status = download(outDir, url, name);
+        const status = download(outDir, url, useTsvName ? name : undefined);
         if (status !== 0) {
             console.error(`Failed to download: ${name} from ${url}`);
             hadError = true;
