@@ -15,5 +15,10 @@
     "test": "command npm run test",
     "build": "command npm run build",
     "compile": "command npm run compile",
-    "start": "command npm run start"
+    "start": "command npm run start",
+    "nuke-node-modules": {
+        "windows": "command rmdir /S /Q node_modules",
+        "mac": "command rm -rf node_modules",
+        "linux": "command rm -rf node_modules"
+    }
 }
