@@ -26,17 +26,19 @@ function expandPercentEnvVariables(value) {
     });
 }
 
-const aliasFilePath = path.join(__dirname, "alias.json");
-const aliasConfigFilePath = path.join(__dirname, "alias.config.json");
-
 function readFileJson(filePath) {
     return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
-const aliasesDefault = readFileJson(aliasFilePath);
-const aliasesConfig = fs.existsSync(aliasConfigFilePath) ? readFileJson(aliasConfigFilePath) : {};
+const aliasConfigFilePaths = [
+    path.join(__dirname, "alias.json"),
+    path.join(__dirname, "alias.config.json"),
+    path.join(expandPercentEnvVariables("%USERPROFILE%/Desktop"), "tools.alias.config.json"),
+];
 
-const aliases = { ...aliasesDefault, ...aliasesConfig };
+const aliasConfig = aliasConfigFilePaths.map((filePath) => (fs.existsSync(filePath) ? readFileJson(filePath) : {}));
+
+const aliases = aliasConfig.reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
 const { values, positionals: parameters } = parseArgs({
     options: {
