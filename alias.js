@@ -34,11 +34,21 @@ const aliasConfigFilePaths = [
     path.join(__dirname, "alias.json"),
     path.join(__dirname, "alias.config.json"),
     path.join(expandPercentEnvVariables("%USERPROFILE%/Desktop"), "tools.alias.config.json"),
+    path.join(expandPercentEnvVariables("%USERPROFILE%/Documents"), "tools.alias.config.json"),
 ];
 
-const aliasConfig = aliasConfigFilePaths.map((filePath) => (fs.existsSync(filePath) ? readFileJson(filePath) : {}));
+const aliasConfig = aliasConfigFilePaths.map((path) => {
+    const exists = fs.existsSync(path);
+    const object = exists ? readFileJson(path) : {};
+    return { path, exists, object };
+});
 
-const aliases = aliasConfig.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+console.log("Loading alias configurations...");
+aliasConfig.forEach(({ path, exists, object }) => {
+    console.log(`${exists ? "." : " "} ${path}`);
+});
+
+const aliases = aliasConfig.reduce((acc, curr) => ({ ...acc, ...curr.object }), {});
 
 const { values, positionals: parameters } = parseArgs({
     options: {
