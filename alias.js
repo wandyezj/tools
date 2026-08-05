@@ -33,8 +33,9 @@ function readFileJson(filePath) {
 const aliasConfigFilePaths = [
     path.join(__dirname, "alias.json"),
     path.join(__dirname, "alias.config.json"),
-    path.join(expandPercentEnvVariables("%USERPROFILE%/Desktop"), "tools.alias.config.json"),
-    path.join(expandPercentEnvVariables("%USERPROFILE%/Documents"), "tools.alias.config.json"),
+    ...["%USERPROFILE%/Desktop", "%OneDrive%/Desktop", "%USERPROFILE%/Documents", "%OneDrive%/Documents"].map((p) =>
+        path.join(expandPercentEnvVariables(p), "tools.alias.config.json")
+    ),
 ];
 
 const aliasConfig = aliasConfigFilePaths.map((path) => {
