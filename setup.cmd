@@ -8,11 +8,58 @@ set THISDIR=%THISDIR:~,-1%
 echo add tools to path
 setx /M PATH "%PATH%;%THISDIR%"
 
+@REM setx requires admin
+
 echo set r
 setx /M r "%THISDIR%\.."
 
-echo show file extensions
-reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced /v HideFileExt /t REG_DWORD /d 0 /f
+echo set tools
+if not defined tools (
+    setx /M tools "%THISDIR%"
+) else (
+    echo tools already set
+)
+
+
+:: Setup NVM and node
+:: 1. Install NVM
+:: https://github.com/coreybutler/nvm-windows/releases
+:: 2. Install node
+:: nvm install lts
+:: nvm use lts
+:: node --version
+
+:: Is NVM installed?
+set "do_install_nvm=true"
+
+where nvm >nul 2>&1
+if %errorlevel% EQU 0 (
+    echo NVM is installed.
+    call nvm version
+    set "do_install_nvm="
+)
+
+set "NVM_DOWNLOAD_URL=https://github.com/coreybutler/nvm-windows/releases/latest/download/nvm-setup.exe"
+set "NVM_DOWNLOAD_EXE=%USERPROFILE%\Downloads\nvm-setup.exe"
+
+if defined do_install_nvm (
+    echo Install NVM
+    curl -L -o "%NVM_DOWNLOAD_EXE%" "%NVM_DOWNLOAD_URL%"
+    if %errorlevel% NEQ 0 (
+        echo [ERROR] Failed to download NVM.
+        goto :cleanup
+    )
+    start /wait "Install NVM" "%NVM_DOWNLOAD_EXE%"
+
+    call nvm install lts
+    call nvm use lts
+    call where node
+    call node --version
+)
+
+call node.exe %THISDIR%\setup.js
+
+
 
 
 @REM set "MATCHED=black"
@@ -45,13 +92,5 @@ reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced /v Hide
 echo restart explorer
 taskkill /f /IM explorer.exe
 start explorer.exe
-
-:: other steps
-:: 1. Install NVM
-:: https://github.com/coreybutler/nvm-windows/releases
-:: 2. Install node
-:: nvm install lts
-:: nvm use lts
-:: node --version
 
 endlocal
