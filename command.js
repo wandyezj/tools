@@ -6,6 +6,6 @@ if (parameters.length < 1) {
     console.log("usage: [command]");
     process.exit(0);
 }
+const command = parameters.join(" ");
 
-
-execSync(`${parameters.join(" ")}`, {stdio: 'inherit'});
+execSync(`${command}`, {stdio: 'inherit'});

@@ -16,6 +16,7 @@
     "build": "command npm run build",
     "compile": "command npm run compile",
     "start": "command npm run start",
+    "edit-tools":"command code %tools%",
     "nuke-node-modules": {
         "windows": "command rmdir /S /Q node_modules",
         "mac": "command rm -rf node_modules",
