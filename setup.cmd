@@ -42,6 +42,8 @@ if %errorlevel% EQU 0 (
 set "NVM_DOWNLOAD_URL=https://github.com/coreybutler/nvm-windows/releases/latest/download/nvm-setup.exe"
 set "NVM_DOWNLOAD_EXE=%USERPROFILE%\Downloads\nvm-setup.exe"
 
+set "NVM=%LOCALAPPDATA%/nvm/mvm.exe"
+
 if defined do_install_nvm (
     echo Install NVM
     curl -L -o "%NVM_DOWNLOAD_EXE%" "%NVM_DOWNLOAD_URL%"
@@ -51,8 +53,8 @@ if defined do_install_nvm (
     )
     start /wait "Install NVM" "%NVM_DOWNLOAD_EXE%"
 
-    call nvm install lts
-    call nvm use lts
+    call "%NVM%" install lts
+    call "%NVM%" use lts
     call where node
     call node --version
 )
