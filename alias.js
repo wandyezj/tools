@@ -4,6 +4,7 @@ const { execSync } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const { parseArgs } = require("util");
+const { getConfig } = require("./lib/getConfig");
 
 const os = require("os");
 const platform = os.type();
@@ -15,33 +16,12 @@ const platformName = isWindows ? "windows" : isMac ? "mac" : isLinux ? "linux" :
 
 const { expandPercentEnvVariables } = require("./lib/expandPercentEnvVariables");
 
-function readFileJson(filePath) {
-    return JSON.parse(fs.readFileSync(filePath, "utf8"));
-}
-
-const aliasConfigFilePaths = [
-    path.join(__dirname, "alias.json"),
-    path.join(__dirname, "alias.config.json"),
-    ...["%USERPROFILE%/Desktop", "%OneDrive%/Desktop", "%USERPROFILE%/Documents", "%OneDrive%/Documents"].map((p) =>
-        path.join(expandPercentEnvVariables(p), "tools.alias.config.json")
-    ),
-];
-
-const aliasConfig = aliasConfigFilePaths.map((path) => {
-    const exists = fs.existsSync(path);
-    const object = exists ? readFileJson(path) : {};
-    return { path, exists, object };
-});
-
-console.log("Loading alias configurations...");
-aliasConfig.forEach(({ path, exists, object }) => {
-    console.log(`${exists ? "." : " "} ${path}`);
-});
-
-const aliases = aliasConfig.reduce((acc, curr) => ({ ...acc, ...curr.object }), {});
-
 const { values, positionals: parameters } = parseArgs({
     options: {
+        ["show-config"]: {
+            type: "boolean",
+            default: false,
+        },
         emit: {
             type: "boolean",
             default: false,
@@ -54,6 +34,8 @@ const { values, positionals: parameters } = parseArgs({
     allowPositionals: true,
     strict: false,
 });
+
+const aliases = getConfig(__dirname, "alias", { printLoaded: values["show-config"] });
 
 let { emit, inline } = values;
 
