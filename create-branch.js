@@ -1,6 +1,6 @@
-const { execSync } = require("child_process");
-const fs = require("fs");
-const path = require("path");
+const { execSync } = require("node:child_process");
+const fs = require("node:fs");
+const { getConfig } = require("./lib/getConfig");
 
 const parameters = process.argv.slice(2);
 
@@ -11,22 +11,22 @@ if (parameters.length !== 1) {
 
 const [branchName] = parameters;
 
+const config = getConfig(__dirname, "create-branch", { printLoaded: false });
+
 let branchPrefix = "";
-const configPath = path.join(__dirname, "create-branch.config.json");
-if (fs.existsSync(configPath)) {
-    const data = fs.readFileSync(configPath, { encoding: "utf-8" });
-    try {
-        const config = JSON.parse(data);
-        const prefix = config["prefix"];
-        if (typeof prefix === "string") {
-            branchPrefix = prefix;
-        } else {
-            throw "Invalid Prefix";
-        }
-    } catch {
-        console.error(`Invalid config ${configPath}\n${data}`);
-        process.exit(0);
+try {
+    const prefix = config["prefix"];
+    if (typeof prefix === "undefined") {
+        // none defined, use empty prefix.
+        branchPrefix = "";
+    } else if (typeof prefix === "string") {
+        branchPrefix = prefix;
+    } else {
+        throw "Invalid Prefix";
     }
+} catch {
+    console.error(`Invalid config ${configPath}\n${data}`);
+    process.exit(0);
 }
 
 const branch = `${branchPrefix}${branchName}`;
@@ -38,4 +38,4 @@ if (!validBranch.test(branch)) {
     process.exit(0);
 }
 
-execSync(`git checkout -b ${branch}`, {stdio: 'inherit'});
+execSync(`git checkout -b ${branch}`, { stdio: "inherit" });
