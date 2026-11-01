@@ -1,3 +1,5 @@
+#!/bin/zsh
+
 # Setup Script for tools on Mac
 
 #
@@ -12,7 +14,7 @@
 #
 
 # The tools directory is the directory where this script is located
-script_dir=$(dirname $0)
+script_dir=${0:A:h}
 #echo "script dir: $script_dir"
 
 #
@@ -25,26 +27,42 @@ chmod +x "${script_dir}/t"
 # Step: Add the tools directory to the PATH environment variable
 #
 
+# Replace $HOME directory value with $HOME for use in export.
+if [[ "$script_dir" == "$HOME" || "$script_dir" == "$HOME/"* ]]; then
+    script_dir="\$HOME${script_dir#"$HOME"}"
+fi
+echo "script dir: $script_dir"
+
 # Add tools to PATH environment variable
 # nano ~/.zshrc
 
-env_file=~/.zshrc
-export_statement="export PATH=\"$script_dir:\$PATH\""
 
-# Check if the export statement already exists in .zshrc to avoid duplicates
-if ! grep -q "${export_statement}" $env_file; then
-    # Append the export statement to .zshrc
-    echo "${export_statement}" >> $env_file
-    echo "Added export statement to: $env_file
-'${export_statement}'"
+env_file=~/.zshrc
+
+echo "
+Adding statements to env file: "$env_file"
+"
+
+for statement in "# Tools" "export PATH=\"$script_dir:\$PATH\"" 'export r="$HOME/Documents/GitHub"'; do
+
+# Check if the statement already exists in .zshrc to avoid duplicates
+if ! grep -Fxq -- "${statement}" "$env_file"; then
+    # Append the statement to .zshrc
+    echo "${statement}" >> "$env_file"
+    echo "Statement added:
+'${statement}'
+"
 else
-    echo "Export statement already in: $env_file
-'${export_statement}'"
+    echo "Statement already exists:
+'${statement}'
+"
 fi
+done
 
 #
 # Step: make sure path is updates in terminal
 #
 
-echo "Setup complete! Please restart your terminal or run 'source ~/.zshrc' to apply the changes."
+echo "Setup complete!"
+echo "Please restart your terminal or run 'source ~/.zshrc' to apply the changes."
 echo "Verify everything is working by running the 't hello' command in terminal."
