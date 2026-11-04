@@ -75,7 +75,12 @@ if (command.length !== 1) {
 const selectedCommand = command[0];
 
 if (selectedCommand === "setup") {
-    // Perform setup tasks here
+    if (process.platform === "darwin") {
+        commandSetupMac();
+    } else {
+        console.error("Setup is only supported on macOS.");
+        process.exit(1);
+    }
 } else if (selectedCommand === "run") {
     commandRun();
 }
@@ -142,4 +147,62 @@ Timestamp: ${getTimeStamp(values)}
             console.error(`Error executing task ${task.name}:`, error);
         }
     }
+}
+
+function commandSetupMac() {
+    const taskName = "daily22";
+    const taskNameFull = `com.user.tools.${taskName}`;
+    const plistContent = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>${taskNameFull}</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-lic</string>
+        <string>t scheduled-task -- --run</string>
+    </array>
+
+    <!-- Run every day at 22:00 -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>22</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <!-- Catch up on missed runs if the Mac was sleeping -->
+    <key>WakeFromSleep</key>
+    <true/>
+
+    <!-- Standard output and error logs -->
+    <key>StandardOutPath</key>
+    <string>${logFolder}/tools.${taskNameFull}.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>${logFolder}/tools.${taskNameFull}.err.log</string>
+</dict>
+</plist>
+`;
+
+    // Where to write plist file for the user?
+    const plistFileName = `com.user.tools.${taskName}.plist`;
+
+    const plistPath = path.join(process.env.HOME, "Library", "LaunchAgents", `com.user.tools.${taskName}.plist`);
+    fs.writeFileSync(plistPath, plistContent);
+
+    console.log("Unload old property list if loaded");
+    console.log(`launchctl bootout gui/$(id -u) ${plistPath}`);
+    console.log("");
+    console.log("Load the new property list into your active user session domain");
+    console.log(`launchctl bootstrap gui/$(id -u) ${plistPath}`);
+    console.log("");
+    console.log("Check job is registered:");
+    console.log(`launchctl list | grep ${taskNameFull}`);
+    console.log("");
+    console.log("Manually run the job:");
+    console.log(`launchctl kickstart -k gui/$(id -u)/com.user.tools.${taskName}`);
 }
