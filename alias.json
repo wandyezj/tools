@@ -8,6 +8,7 @@
     "fetch": "command git fetch",
     "pull": "command git pull",
     "push": "command git push",
+    "checkout": "command git checkout",
     "style": "command npm run style",
     "style-check": "command npm run style-check",
     "spell-check": "command npm run spell-check",
@@ -16,7 +17,7 @@
     "build": "command npm run build",
     "compile": "command npm run compile",
     "start": "command npm run start",
-    "edit-tools":"command code %tools%",
+    "edit-tools": "command code %tools%",
     "nuke-node-modules": {
         "windows": "command rmdir /S /Q node_modules",
         "mac": "command rm -rf node_modules",

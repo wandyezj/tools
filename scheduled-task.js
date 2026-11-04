@@ -14,6 +14,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { parseArgs } = require("node:util");
+const { userInfo } = require("node:os");
 
 const { getConfig } = require("./lib/getConfig");
 const { expandPercentEnvVariables } = require("./lib/expandPercentEnvVariables");
@@ -63,7 +64,7 @@ const args = parseArgs({
         setup: { type: "boolean" },
     },
 });
-console.log("Parsed arguments:", args);
+// console.log("Parsed arguments:", args);
 
 const command = [args.values.run ? "run" : false, args.values.setup ? "setup" : false].filter(Boolean);
 
@@ -75,10 +76,13 @@ if (command.length !== 1) {
 const selectedCommand = command[0];
 
 if (selectedCommand === "setup") {
-    if (process.platform === "darwin") {
+    const platform = process.platform;
+    if (platform === "darwin") {
         commandSetupMac();
+    } else if (platform === "win32") {
+        commandSetupWindows();
     } else {
-        console.error("Setup is only supported on macOS.");
+        console.error("Setup is only supported on macOS and Windows.");
         process.exit(1);
     }
 } else if (selectedCommand === "run") {
@@ -151,7 +155,7 @@ Timestamp: ${getTimeStamp(values)}
 
 function commandSetupMac() {
     const taskName = "daily22";
-    const taskNameFull = `com.user.tools.${taskName}`;
+    const taskNameFull = `user.tools.${taskName}`;
     const plistContent = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -191,7 +195,7 @@ function commandSetupMac() {
     // Where to write plist file for the user?
     const plistFileName = `com.user.tools.${taskName}.plist`;
 
-    const plistPath = path.join(process.env.HOME, "Library", "LaunchAgents", `com.user.tools.${taskName}.plist`);
+    const plistPath = path.join(process.env.HOME, "Library", "LaunchAgents", plistFileName);
     fs.writeFileSync(plistPath, plistContent);
 
     console.log("Unload old property list if loaded");
@@ -205,4 +209,89 @@ function commandSetupMac() {
     console.log("");
     console.log("Manually run the job:");
     console.log(`launchctl kickstart -k gui/$(id -u)/com.user.tools.${taskName}`);
+}
+
+function commandSetupWindows() {
+    const taskNameFull = "user.tools.daily22";
+
+    const resolvedLogFolder = path.resolve(logFolder);
+
+    const taskPath = path.join(resolvedLogFolder, `${taskNameFull}.xml`);
+    const stdoutPath = path.join(resolvedLogFolder, `tools.${taskNameFull}.out.log`);
+    const stderrPath = path.join(resolvedLogFolder, `tools.${taskNameFull}.err.log`);
+
+    const username = userInfo().username;
+    const userId = process.env.USERDOMAIN ? `${process.env.USERDOMAIN}\\${username}` : username;
+    const escapeXml = (value) =>
+        value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+    const argumentsValue = `/d /s /v:off /c "t scheduled-task -- --run 1>>"${stdoutPath}" 2>>"${stderrPath}""`;
+
+    const taskContent = `<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+    <Triggers>
+        <CalendarTrigger>
+            <StartBoundary>2000-01-01T22:00:00</StartBoundary>
+            <Enabled>true</Enabled>
+            <ScheduleByDay>
+                <DaysInterval>1</DaysInterval>
+            </ScheduleByDay>
+        </CalendarTrigger>
+    </Triggers>
+    <Principals>
+        <Principal id="Author">
+            <UserId>${escapeXml(userId)}</UserId>
+            <LogonType>InteractiveToken</LogonType>
+            <RunLevel>LeastPrivilege</RunLevel>
+        </Principal>
+    </Principals>
+    <Settings>
+        <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+        <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+        <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+        <StartWhenAvailable>true</StartWhenAvailable>
+        <WakeToRun>true</WakeToRun>
+        <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    </Settings>
+    <Actions Context="Author">
+        <Exec>
+            <Command>${escapeXml(process.env.ComSpec || "C:\\Windows\\System32\\cmd.exe")}</Command>
+            <Arguments>${escapeXml(argumentsValue)}</Arguments>
+            <WorkingDirectory>${escapeXml(__dirname)}</WorkingDirectory>
+        </Exec>
+    </Actions>
+</Task>
+`;
+
+    fs.writeFileSync(taskPath, "\uFEFF" + taskContent, "utf16le");
+
+    registerTaskWindows(taskNameFull, taskPath);
+    checkTaskWindows(taskNameFull);
+
+    console.log("Register or replace the task for the current user (run in Command Prompt):");
+    console.log(`schtasks /Create /TN "${taskNameFull}" /XML "${taskPath}" /F`);
+    console.log("");
+    console.log("Check job is registered:");
+    console.log(`schtasks /Query /TN "${taskNameFull}" /V /FO LIST`);
+    console.log("");
+    console.log("Manually run the job:");
+    console.log(`schtasks /Run /TN "${taskNameFull}"`);
+}
+
+function registerTaskWindows(taskName, taskPath) {
+    console.log(runCommand("schtasks.exe", ["/Create", "/TN", taskName, "/XML", taskPath, "/F"]));
+}
+
+function checkTaskWindows(taskName) {
+    console.log(runCommand("schtasks.exe", ["/Query", "/TN", taskName, "/V", "/FO", "LIST"]));
+}
+
+function runCommand(command, args) {
+    const result = spawnSync(command, args, { encoding: "utf8", timeout: 15000 });
+    if (result.error) {
+        throw result.error;
+    }
+    if (result.status !== 0) {
+        throw new Error(`${command} failed (${result.status}): ${result.stderr || result.stdout}`);
+    }
+    return result.stdout;
 }
