@@ -1,0 +1,9 @@
+{
+    "logFolder": "%r%/logs",
+    "tasks": [
+        {
+            "name": "hello",
+            "command": "t hello world"
+        }
+    ]
+}
