@@ -18,6 +18,8 @@ const { userInfo } = require("node:os");
 
 const { getConfig } = require("./lib/getConfig");
 const { expandPercentEnvVariables } = require("./lib/expandPercentEnvVariables");
+const { ensureDirectoryExists } = require("./lib/ensureDirectoryExists");
+const { clearDirectory } = require("./lib/clearDirectory");
 
 /**
  * @typedef {object} Config
@@ -51,10 +53,10 @@ if (!config.logFolder) {
     process.exit(1);
 }
 
-const logFolder = expandPercentEnvVariables(config.logFolder);
+const logFolderBase = expandPercentEnvVariables(config.logFolder);
 
-if (!fs.existsSync(logFolder)) {
-    console.error(`Log folder does not exist: ${logFolder}`);
+if (!fs.existsSync(logFolderBase)) {
+    console.error(`Log folder does not exist: ${logFolderBase}`);
     process.exit(1);
 }
 
@@ -114,12 +116,15 @@ function getTimeStamp(values) {
 }
 
 function getTimeStampFileName(values) {
-    const timestamp = `${values.year}-${values.month}-${values.day}_${values.hour}-${values.minute}-${values.second}-${values.fractionalSecond}`;
+    const timestamp = `${values.year}-${values.month}-${values.day}_${values.hour}${values.minute}_${values.second}${values.fractionalSecond}`;
 
     return timestamp;
 }
 
 function commandRun() {
+    const { taskNameFull, logFolder } = getCommonTaskConfig({ logFolderBase });
+    ensureDirectoryExists(logFolder);
+
     console.log("Running scheduled tasks...");
     // Pull each scheduled task from the configuration and execute its command.
     for (const task of config.tasks) {
@@ -127,7 +132,7 @@ function commandRun() {
 
         const values = getTimeStampEntries();
 
-        const logName = `${task.name}_${getTimeStampFileName(values)}.log`;
+        const logName = `${getTimeStampFileName(values)}_${task.name}.log`;
         // Ensure log
         const logPath = path.join(logFolder, logName);
         console.log(`Log path:`, logPath);
@@ -153,9 +158,30 @@ Timestamp: ${getTimeStamp(values)}
     }
 }
 
-function commandSetupMac() {
+function getCommonTaskConfig({ logFolderBase }) {
     const taskName = "daily22";
     const taskNameFull = `user.tools.${taskName}`;
+
+    const logFolder = path.resolve(path.join(logFolderBase, taskNameFull));
+    const filepathOut = path.resolve(path.join(logFolder, `out.log`));
+    const filepathError = path.resolve(path.join(logFolder, `err.log`));
+    return {
+        taskName,
+        taskNameFull,
+        logFolder,
+        filepathOut,
+        filepathError,
+        command: `t scheduled-task -- --run`,
+    };
+}
+
+function commandSetupMac() {
+    const { taskName, taskNameFull, logFolder, filepathOut, filepathError, command } = getCommonTaskConfig({
+        logFolderBase,
+    });
+    clearDirectory(logFolder);
+    ensureDirectoryExists(logFolder);
+
     const plistContent = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -167,7 +193,7 @@ function commandSetupMac() {
     <array>
         <string>/bin/zsh</string>
         <string>-lic</string>
-        <string>t scheduled-task -- --run</string>
+        <string>${command}</string>
     </array>
 
     <!-- Run every day at 22:00 -->
@@ -185,9 +211,9 @@ function commandSetupMac() {
 
     <!-- Standard output and error logs -->
     <key>StandardOutPath</key>
-    <string>${logFolder}/tools.${taskNameFull}.out.log</string>
+    <string>${filepathOut}</string>
     <key>StandardErrorPath</key>
-    <string>${logFolder}/tools.${taskNameFull}.err.log</string>
+    <string>${filepathError}</string>
 </dict>
 </plist>
 `;
@@ -198,33 +224,34 @@ function commandSetupMac() {
     const plistPath = path.join(process.env.HOME, "Library", "LaunchAgents", plistFileName);
     fs.writeFileSync(plistPath, plistContent);
 
-    console.log("Unload old property list if loaded");
-    console.log(`launchctl bootout gui/$(id -u) ${plistPath}`);
-    console.log("");
-    console.log("Load the new property list into your active user session domain");
-    console.log(`launchctl bootstrap gui/$(id -u) ${plistPath}`);
-    console.log("");
-    console.log("Check job is registered:");
-    console.log(`launchctl list | grep ${taskNameFull}`);
-    console.log("");
-    console.log("Manually run the job:");
-    console.log(`launchctl kickstart -k gui/$(id -u)/com.user.tools.${taskName}`);
+    console.log(`
+Unload old property list if loaded
+launchctl bootout gui/$(id -u) ${plistPath}
+
+Load the new property list into your active user session domain
+launchctl bootstrap gui/$(id -u) ${plistPath}
+
+Check job is registered:
+launchctl list | grep ${taskNameFull}
+
+Manually run the job:
+launchctl kickstart -k gui/$(id -u)/com.user.tools.${taskName}`);
 }
 
 function commandSetupWindows() {
-    const taskNameFull = "user.tools.daily22";
+    const { filepathOut, filepathError, logFolder, taskNameFull, command } = getCommonTaskConfig({
+        logFolderBase,
+    });
+    clearDirectory(logFolder);
+    ensureDirectoryExists(logFolder);
 
-    const resolvedLogFolder = path.resolve(logFolder);
-
-    const taskPath = path.join(resolvedLogFolder, `${taskNameFull}.xml`);
-    const stdoutPath = path.join(resolvedLogFolder, `tools.${taskNameFull}.out.log`);
-    const stderrPath = path.join(resolvedLogFolder, `tools.${taskNameFull}.err.log`);
+    const taskPath = path.join(logFolder, `${taskNameFull}.xml`);
 
     const username = userInfo().username;
     const userId = process.env.USERDOMAIN ? `${process.env.USERDOMAIN}\\${username}` : username;
     const escapeXml = (value) =>
         value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
-    const argumentsValue = `/d /s /v:off /c "t scheduled-task -- --run 1>>"${stdoutPath}" 2>>"${stderrPath}""`;
+    const argumentsValue = `/d /s /v:off /c "${command} 1>"${filepathOut}" 2>"${filepathError}""`;
 
     const taskContent = `<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
@@ -267,14 +294,16 @@ function commandSetupWindows() {
     registerTaskWindows(taskNameFull, taskPath);
     checkTaskWindows(taskNameFull);
 
-    console.log("Register or replace the task for the current user (run in Command Prompt):");
-    console.log(`schtasks /Create /TN "${taskNameFull}" /XML "${taskPath}" /F`);
-    console.log("");
-    console.log("Check job is registered:");
-    console.log(`schtasks /Query /TN "${taskNameFull}" /V /FO LIST`);
-    console.log("");
-    console.log("Manually run the job:");
-    console.log(`schtasks /Run /TN "${taskNameFull}"`);
+    console.log(`
+Register or replace the task for the current user (run in Command Prompt):
+schtasks /Create /TN "${taskNameFull}" /XML "${taskPath}" /F
+
+Check job is registered:
+schtasks /Query /TN "${taskNameFull}" /V /FO LIST
+
+Manually run the job:
+schtasks /Run /TN "${taskNameFull}"
+`);
 }
 
 function registerTaskWindows(taskName, taskPath) {

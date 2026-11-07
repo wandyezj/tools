@@ -76,10 +76,11 @@ console.log("");
 // Now parse out a command to apply to all repositories
 // Use parse args, allow the command fetch use parseArgs
 
-const args = parseArgs({ options: { command: { type: "string" } } });
-const command = args.values.command;
+const args = parseArgs({ options: { fetch: { type: "boolean" }, command: { type: "string" } } });
 
-if (command === undefined) {
+const command = [args.values.command, args.values.fetch ? "fetch" : undefined].filter(Boolean);
+
+if (command.length === 0) {
     console.log("\nNo command specified");
     process.exit(0);
 }
@@ -87,19 +88,19 @@ if (command === undefined) {
 // Allowed commands
 const allowedCommands = ["fetch"];
 
-if (!allowedCommands.includes(command)) {
+if (!command.every((cmd) => allowedCommands.includes(cmd))) {
     console.error(`Invalid command: ${command}`);
     process.exit(1);
 }
 
 // Apply the command to all repositories
 for (const repo of repositories) {
-    console.log(`Applying command "${command}" to repositories`);
+    console.log(`Applying command "${command.join(" ")}" to repository "${repo.name}"`);
     const separator = "_".repeat(repo.path.length);
     console.log(`\n${separator}\n${repo.path}\n`);
     // Here you would execute the command, e.g., using child_process.exec or similar
     // run git fetch in the repository path
-    if (command === "fetch") {
+    if (command.includes("fetch")) {
         try {
             execSync("git fetch --verbose", { cwd: repo.path, stdio: "inherit" });
         } catch (error) {

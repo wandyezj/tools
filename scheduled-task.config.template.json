@@ -4,6 +4,10 @@
         {
             "name": "hello",
             "command": "t hello world"
+        },
+        {
+            "name": "git-update",
+            "command": "t git-repository-manager -- --fetch"
         }
     ]
 }
