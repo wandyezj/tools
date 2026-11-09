@@ -1,5 +1,5 @@
 {
-    "logFolder": "%r%/logs",
+    "logFolder": "%r%/.logs",
     "tasks": [
         {
             "name": "hello",
