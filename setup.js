@@ -172,6 +172,20 @@ function setupWindows() {
             type: "REG_DWORD",
             data: "0",
         },
+        // Use Windows Terminal's console delegation handler for console applications.
+        {
+            key: String.raw`HKCU\Console\%%Startup`,
+            value: "DelegationConsole",
+            type: "REG_SZ",
+            data: "{2EACA947-7F5F-4CFA-BA87-8F7FBEEFBE69}",
+        },
+        // Use Windows Terminal as the default terminal UI instead of Windows Console Host.
+        {
+            key: String.raw`HKCU\Console\%%Startup`,
+            value: "DelegationTerminal",
+            type: "REG_SZ",
+            data: "{E12CFF52-A866-4C77-9A90-F570A7AA2C6B}",
+        },
     ];
 
     regValues.forEach(windowsRegValueTestAndSet);
