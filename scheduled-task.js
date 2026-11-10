@@ -21,6 +21,9 @@ const { expandPercentEnvVariables } = require("./lib/expandPercentEnvVariables")
 const { ensureDirectoryExists } = require("./lib/ensureDirectoryExists");
 const { clearDirectory } = require("./lib/clearDirectory");
 
+const { platformName } = require("./lib/platform");
+
+
 /**
  * @typedef {object} Config
  * @property {string} [logFolder]
@@ -78,14 +81,17 @@ if (command.length !== 1) {
 const selectedCommand = command[0];
 
 if (selectedCommand === "setup") {
-    const platform = process.platform;
-    if (platform === "darwin") {
-        commandSetupMac();
-    } else if (platform === "win32") {
-        commandSetupWindows();
-    } else {
-        console.error("Setup is only supported on macOS and Windows.");
-        process.exit(1);
+   
+    switch (platformName) {
+        case "mac":
+            commandSetupMac();
+            break;
+        case "windows":
+            commandSetupWindows();
+            break;
+        default:
+            console.error("Setup is only supported on macOS and Windows.");
+            process.exit(1);
     }
 } else if (selectedCommand === "run") {
     commandRun();
@@ -121,9 +127,35 @@ function getTimeStampFileName(values) {
     return timestamp;
 }
 
+/**
+ * @param {string[]} values
+ * @returns {{name: string, indices: number[]}[]}
+ */
+function findDuplicates(values) {
+    /** @type {{name: string, indices: number[]}[]} */
+    const groups = [];
+    values.forEach((name, index) => {
+        const group = groups.find((entry) => entry.name === name);
+        if (group) {
+            group.indices.push(index);
+        } else {
+            groups.push({ name, indices: [index] });
+        }
+    });
+    return groups.filter((group) => group.indices.length > 1);
+}
+
 function commandRun() {
     const { taskNameFull, logFolder } = getCommonTaskConfig({ logFolderBase });
     ensureDirectoryExists(logFolder);
+
+    // validate all task names are unique
+    const duplicates = findDuplicates(config.tasks.map((task) => task.name));
+    if (duplicates.length > 0) {
+        const duplicateLines = duplicates.map(({ name, indices }) => `  ${name}: [${indices.join(", ")}]`);
+        console.log(`Duplicate task names found at indicies:\n${duplicateLines.join("\n")}`);
+        process.exit(1);
+    }
 
     console.log("Running scheduled tasks...");
     // Pull each scheduled task from the configuration and execute its command.
@@ -253,6 +285,8 @@ function commandSetupWindows() {
         value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
     const argumentsValue = `/d /s /v:off /c "${command} 1>"${filepathOut}" 2>"${filepathError}""`;
 
+    const runAsAdmin = false; // Set to true if the task should run with elevated privileges
+
     const taskContent = `<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
     <Triggers>
@@ -268,7 +302,7 @@ function commandSetupWindows() {
         <Principal id="Author">
             <UserId>${escapeXml(userId)}</UserId>
             <LogonType>InteractiveToken</LogonType>
-            <RunLevel>LeastPrivilege</RunLevel>
+            <RunLevel>${runAsAdmin ? "HighestAvailable" : "LeastPrivilege"}</RunLevel>
         </Principal>
     </Principals>
     <Settings>
