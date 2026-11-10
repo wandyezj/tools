@@ -20,6 +20,7 @@ const { getConfig } = require("./lib/getConfig");
 const { expandPercentEnvVariables } = require("./lib/expandPercentEnvVariables");
 const { ensureDirectoryExists } = require("./lib/ensureDirectoryExists");
 const { clearDirectory } = require("./lib/clearDirectory");
+const { findDuplicates } = require("./lib/findDuplicates");
 
 const { platformName } = require("./lib/platform");
 
@@ -125,24 +126,6 @@ function getTimeStampFileName(values) {
     const timestamp = `${values.year}-${values.month}-${values.day}_${values.hour}${values.minute}_${values.second}${values.fractionalSecond}`;
 
     return timestamp;
-}
-
-/**
- * @param {string[]} values
- * @returns {{name: string, indices: number[]}[]}
- */
-function findDuplicates(values) {
-    /** @type {{name: string, indices: number[]}[]} */
-    const groups = [];
-    values.forEach((name, index) => {
-        const group = groups.find((entry) => entry.name === name);
-        if (group) {
-            group.indices.push(index);
-        } else {
-            groups.push({ name, indices: [index] });
-        }
-    });
-    return groups.filter((group) => group.indices.length > 1);
 }
 
 function commandRun() {
