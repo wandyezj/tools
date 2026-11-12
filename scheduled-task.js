@@ -21,14 +21,14 @@ const { expandPercentEnvVariables } = require("./lib/expandPercentEnvVariables")
 const { ensureDirectoryExists } = require("./lib/ensureDirectoryExists");
 const { clearDirectory } = require("./lib/clearDirectory");
 const { findDuplicates } = require("./lib/findDuplicates");
+const { getTimeStampEntries, getTimeStamp, getTimeStampFileName } = require("./lib/getTimeStamp.ts");
 
 const { platformName } = require("./lib/platform");
-
 
 /**
  * @typedef {object} Config
  * @property {string} [logFolder]
- * @property {{name: string, schedule: string, command: string}[]} tasks
+ * @property {{name: string, schedule: string[], command: string}[]} tasks
  */
 
 /**
@@ -82,7 +82,6 @@ if (command.length !== 1) {
 const selectedCommand = command[0];
 
 if (selectedCommand === "setup") {
-   
     switch (platformName) {
         case "mac":
             commandSetupMac();
@@ -96,36 +95,6 @@ if (selectedCommand === "setup") {
     }
 } else if (selectedCommand === "run") {
     commandRun();
-}
-
-function getTimeStampEntries() {
-    const parts = new Intl.DateTimeFormat("en-GB", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        fractionalSecondDigits: 3,
-        hourCycle: "h23",
-        timeZoneName: "short",
-    }).formatToParts(new Date());
-
-    const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
-
-    return values;
-}
-
-function getTimeStamp(values) {
-    const timestamp = `${values.year}-${values.month}-${values.day} ${values.hour}:${values.minute}:${values.second}.${values.fractionalSecond} ${values.timeZoneName}`;
-
-    return timestamp;
-}
-
-function getTimeStampFileName(values) {
-    const timestamp = `${values.year}-${values.month}-${values.day}_${values.hour}${values.minute}_${values.second}${values.fractionalSecond}`;
-
-    return timestamp;
 }
 
 function commandRun() {
