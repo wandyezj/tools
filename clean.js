@@ -1,3 +1,4 @@
+// @ts-check
 // Delete a directory
 // node clean.js directory
 
