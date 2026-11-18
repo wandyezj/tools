@@ -1,13 +1,25 @@
 {
     "logFolder": "%r%/.logs",
+    "triggers": [
+        {
+            "name": "daily22",
+            "schedule": {
+                "type": "daily",
+                "hour": 22,
+                "minute": 0
+            }
+        }
+    ],
     "tasks": [
         {
             "name": "hello",
-            "command": "t hello world"
+            "command": "t hello world",
+            "trigger": "daily22"
         },
         {
             "name": "git-update",
-            "command": "t git-repository-manager -- --fetch"
+            "command": "t git-repository-manager -- --fetch",
+            "trigger": "daily22"
         }
     ]
 }
