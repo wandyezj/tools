@@ -236,7 +236,7 @@ if (selectedCommand === "setup") {
             commandSetupMac(config.triggers, logFolderBase);
             break;
         case "windows":
-            commandSetupWindows();
+            commandSetupWindows(config.triggers, logFolderBase);
             break;
         default:
             console.error("Setup is only supported on macOS and Windows.");
@@ -500,14 +500,68 @@ function commandSetupMac(triggers, logFolderBase) {
     });
 }
 
-function commandSetupWindows() {
+/**
+ * @param {Trigger[]} triggers
+ * @param {string} logFolderBase
+ */
+function commandSetupWindows(triggers, logFolderBase) {
+    const { taskNameBase } = getCommonTaskConfig({
+        logFolderBase,
+    });
+    const existingTasks = runCommand("schtasks.exe", ["/Query", "/FO", "CSV", "/NH"])
+        .split(/\r?\n/)
+        .map((line) => /^"((?:[^"]|"")*)"/.exec(line)?.[1]?.replaceAll('""', '"'))
+        .filter((task) => task && task.startsWith(`\\${taskNameBase}`));
+
+    console.log(`Existing tasks to remove:\n\t${existingTasks.join("\n\t")}`);
+    for (const task of existingTasks) {
+        runCommand("schtasks.exe", ["/Delete", "/TN", task, "/F"]);
+    }
+
+    for (const trigger of triggers) {
+        createWindowsTrigger(trigger, logFolderBase);
+    }
+}
+
+/**
+ * @param {Trigger} trigger
+ * @param {string} logFolderBase
+ */
+function createWindowsTrigger(trigger, logFolderBase) {
+    const { name, schedule } = trigger;
     const { filepathOut, filepathError, logFolder, taskNameFull, command } = getCommonTaskConfig({
         logFolderBase,
+        taskName: name,
     });
     clearDirectory(logFolder);
     ensureDirectoryExists(logFolder);
 
     const taskPath = path.join(logFolder, `${taskNameFull}.xml`);
+    const time = `${String(schedule.hour).padStart(2, "0")}:00:00`;
+    let calendarSchedule;
+    switch (schedule.type) {
+        case "daily":
+            calendarSchedule = `            <ScheduleByDay>
+                <DaysInterval>1</DaysInterval>
+            </ScheduleByDay>`;
+            break;
+        case "weekday":
+        case "weekdays": {
+            const weekdays = schedule.type === "weekday" ? [schedule.weekday] : schedule.weekdays;
+            const daysOfWeek = weekdays
+                .map((weekday) => `                    <${weekday[0].toUpperCase()}${weekday.slice(1)} />`)
+                .join("\n");
+            calendarSchedule = `            <ScheduleByWeek>
+                <WeeksInterval>1</WeeksInterval>
+                <DaysOfWeek>
+${daysOfWeek}
+                </DaysOfWeek>
+            </ScheduleByWeek>`;
+            break;
+        }
+        default:
+            throw new Error(`Unsupported schedule type: ${schedule.type}`);
+    }
 
     const username = userInfo().username;
     const userId = process.env.USERDOMAIN ? `${process.env.USERDOMAIN}\\${username}` : username;
@@ -521,11 +575,9 @@ function commandSetupWindows() {
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
     <Triggers>
         <CalendarTrigger>
-            <StartBoundary>2000-01-01T22:00:00</StartBoundary>
+            <StartBoundary>2000-01-01T${time}</StartBoundary>
             <Enabled>true</Enabled>
-            <ScheduleByDay>
-                <DaysInterval>1</DaysInterval>
-            </ScheduleByDay>
+${calendarSchedule}
         </CalendarTrigger>
     </Triggers>
     <Principals>
