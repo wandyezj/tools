@@ -1,0 +1,15 @@
+{
+    "configs": [
+        "tools",
+        "userprofile-desktop",
+        "userprofile-desktop-tools",
+        "userprofile-documents",
+        "userprofile-documents-tools",
+        "onedrive-desktop",
+        "onedrive-desktop-tools",
+        "onedrive-documents",
+        "onedrive-documents-tools",
+        "r-config",
+        "r-dot-config"
+    ]
+}
