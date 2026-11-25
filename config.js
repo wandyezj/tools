@@ -5,15 +5,15 @@ const { join } = require("path");
 const { existsSync, copyFileSync } = require("fs");
 const { parseArgs } = require("node:util");
 const { ensureDirectoryExists } = require("./lib/ensureDirectoryExists");
-const { getConfigFilePaths } = require("./lib/getConfig.js");
+const { getConfigs } = require("./lib/getConfig.js");
 
 const templates = ["create-branch", "git-repository-manager", "scheduled-task"];
 
 function commandList() {
     for (const templateName of templates) {
         console.log(`\n\n${templateName}:\n`);
-        for (const configPath of getConfigFilePaths(__dirname, templateName)) {
-            console.log(configPath);
+        for (const { path: configPath, exists } of getConfigs(__dirname, templateName)) {
+            console.log(`${exists ? "." : " "}  ${configPath}`);
         }
     }
 }
